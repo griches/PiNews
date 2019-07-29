@@ -1,7 +1,7 @@
 import SwiftyGPIO
 import Foundation
 import Glibc
-//import HD44780LCD
+import HD44780LCD
 
 let width = 20
 let height = 4
@@ -222,18 +222,20 @@ func displayInfo() {
             let splitHeadline = headlines[story]
             lcd.clearScreen()
             var y = 0
-            
-            let totalPages = floor((splitHeadline.count - 1) / height)
-            
+
             let startIndex = (currentPage * height)
-            let endIndex = min((currentPage * height) + (height - 1), splitHeadline.count) // 0 based start
+            let endIndex = min((currentPage * height) + height, splitHeadline.count) // 0 based start
+            print("start \(startIndex)")
+            print("end \(endIndex)")
             for line in startIndex ..< endIndex {
+                print("line: \(line)     headline:\(splitHeadline[line])")
                 lcd.printString(x: 0, y: y, what: splitHeadline[line], usCharSet: true)
                 y += 1
             }
             
             // Have we finished the story, or do we need to scroll to the next page?
             if endIndex == splitHeadline.count {
+                currentPage = 0
                 story += 1
             } else {
                 currentPage += 1
@@ -256,7 +258,7 @@ func displayInfo() {
     }while(true) 
 }
 
-func wait(seconds: Int) {
+func wait(seconds: UInt32) {
     usleep((seconds * 1000) * 1000)
 }
 
@@ -279,10 +281,6 @@ func split(headline: String) -> [String] {
     }
     if splitHeadline.last != currentString {
         splitHeadline.append(currentString)
-    }
-    
-    while splitHeadline.count > 4 {
-        _ = splitHeadline.popLast()
     }
     
     return splitHeadline

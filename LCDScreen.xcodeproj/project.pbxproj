@@ -21,7 +21,6 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
-		OBJ_37 /* display.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_9 /* display.swift */; };
 		OBJ_38 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_10 /* main.swift */; };
 		OBJ_40 /* SwiftyGPIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = "SwiftyGPIO::SwiftyGPIO::Product" /* SwiftyGPIO.framework */; };
 		OBJ_48 /* Package.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_6 /* Package.swift */; };
@@ -90,7 +89,6 @@
 		OBJ_26 /* SwiftyGPIO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftyGPIO.swift; sourceTree = "<group>"; };
 		OBJ_27 /* UART.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UART.swift; sourceTree = "<group>"; };
 		OBJ_6 /* Package.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; path = Package.swift; sourceTree = "<group>"; };
-		OBJ_9 /* display.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = display.swift; sourceTree = "<group>"; };
 		"SwiftyGPIO::SwiftyGPIO::Product" /* SwiftyGPIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SwiftyGPIO.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -199,7 +197,6 @@
 		OBJ_8 /* LCDScreen */ = {
 			isa = PBXGroup;
 			children = (
-				OBJ_9 /* display.swift */,
 				OBJ_10 /* main.swift */,
 			);
 			name = LCDScreen;
@@ -349,7 +346,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 0;
 			files = (
-				OBJ_37 /* display.swift in Sources */,
 				OBJ_38 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
