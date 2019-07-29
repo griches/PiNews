@@ -1,7 +1,10 @@
 import SwiftyGPIO
 import Foundation
 import Glibc
-import HD44780LCD
+//import HD44780LCD
+
+let width = 20
+let height = 4
 
 let gpios = SwiftyGPIO.GPIOs(for: .RaspberryPi2)
 var rs = gpios[.P27]!
@@ -10,10 +13,10 @@ var d4 = gpios[.P25]!
 var d5 = gpios[.P24]!
 var d6 = gpios[.P23]!
 var d7 = gpios[.P18]!
-let lcd = HD44780LCD(rs:rs,e:e,d7:d7,d6:d6,d5:d5,d4:d4,width:20,height:4)
+let lcd = HD44780LCD(rs:rs,e:e,d7:d7,d6:d6,d5:d5,d4:d4,width:width,height:height)
 var story = 0
 var headlines: [[String]] = []
-var currentLine = 0
+var currentPage = 0
 var fetchNewsDate = Date()
 
 // MARK: - News
@@ -77,7 +80,7 @@ struct TrainService: Codable {
     let delayReason, serviceID, serviceIDPercentEncoded, serviceIDGUID: String?
     let serviceIDURLSafe: String?
     let adhocAlerts: JSONNull?
-
+    
     enum CodingKeys: String, CodingKey {
         case origin, destination, currentOrigins, currentDestinations, rsid, sta, eta, std, etd, platform
         case trainServiceOperator = "operator"
@@ -100,29 +103,29 @@ struct Destination: Codable {
 // MARK: - Encode/decode helpers
 
 class JSONNull: Codable, Hashable {
-
+    
     public static func == (lhs: JSONNull, rhs: JSONNull) -> Bool {
         return true
     }
-
+    
     public var hashValue: Int {
         return 0
     }
-
+    
     public init() {}
-
+    
     public required init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         if !container.decodeNil() {
             throw DecodingError.typeMismatch(JSONNull.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Wrong type for JSONNull"))
         }
     }
-
+    
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encodeNil()
     }
-
+    
     func hash(into hasher: inout Hasher) {
         hasher.combine(-1)
     }
@@ -130,14 +133,14 @@ class JSONNull: Codable, Hashable {
 
 let newsURL = URL(string: "https://newsapi.org/v2/top-headlines?country=us&apiKey=2c5ede941f6546c0a3ce330b9c03af8b")!
 let trainURL = URL(string: "https://huxley.apphb.com/all/gtw/from/vic/1?accessToken=DA1C7740-9DA0-11E4-80E6-A920340000B1")!
-		
+
 func loadNews(){
     
     print()
-
+    
     headlines = []
     story = 0
-
+    
     let session = URLSession.shared.dataTask(with: newsURL) { (data: Data?, response: URLResponse?, error: Error?) in
         if error != nil {
             // Handle Error
@@ -161,16 +164,16 @@ func loadNews(){
         // Handle Decode Data into Model
         fetchNewsDate = Date()
         print("Fetched news: \(Date())")
-
+        
         do {
             let news = try JSONDecoder().decode(News.self, from: data)
             let articles = news.articles	
-
+            
             for article in articles {
                 let splitHeadline = split(headline: article.title)
                 headlines.append(splitHeadline)
             }
-
+            
             displayInfo()
         } catch let error {
             print(error)
@@ -180,10 +183,10 @@ func loadNews(){
 }
 
 func loadTrain(){
-
+    
     headlines = []
     story = 0
-
+    
     let session = URLSession.shared.dataTask(with: trainURL) { (data: Data?, response: URLResponse?, error: Error?) in
         if error != nil {
             // Handle Error
@@ -201,7 +204,7 @@ func loadTrain(){
             return
         }
         // Handle Decode Data into Model
-
+        
         do {
             let trainInfo = try JSONDecoder().decode(TrainInfo.self, from: data)
             
@@ -214,16 +217,30 @@ func loadTrain(){
 
 func displayInfo() {
     repeat{
-	if headlines.count != 0 {
+        if headlines.count != 0 {
+            
             let splitHeadline = headlines[story]
             lcd.clearScreen()
-            var y = 0 
-            for line in splitHeadline {
-                lcd.printString(x:0,y:y,what:line,usCharSet:true)
+            var y = 0
+            
+            let totalPages = floor((splitHeadline.count - 1) / height)
+            
+            let startIndex = (currentPage * height)
+            let endIndex = min((currentPage * height) + (height - 1), splitHeadline.count) // 0 based start
+            for line in startIndex ..< endIndex {
+                lcd.printString(x: 0, y: y, what: splitHeadline[line], usCharSet: true)
                 y += 1
             }
-            story += 1
+            
+            // Have we finished the story, or do we need to scroll to the next page?
+            if endIndex == splitHeadline.count {
+                story += 1
+            } else {
+                currentPage += 1
+            }
+            
             if story == headlines.count {
+                
                 story = 0
                 
                 // Has enough time passed that we need to fetch the news again?
@@ -232,9 +249,15 @@ func displayInfo() {
                     return
                 }
             }
-            usleep(6000*1000)
+            
+            // Wait for 6 seconds
+            wait(seconds: 6)
         }
     }while(true) 
+}
+
+func wait(seconds: Int) {
+    usleep((seconds * 1000) * 1000)
 }
 
 func split(headline: String) -> [String] {
@@ -243,7 +266,7 @@ func split(headline: String) -> [String] {
     var currentString = ""
     
     let words = headline.components(separatedBy: " ")
-
+    
     for word in words {
         if currentString.isEmpty {
             currentString = word
@@ -270,10 +293,10 @@ loadNews()
 loadTrain()
 
 repeat{
-	if loaded == false {
-		
-		loaded = true
-	}
+    if loaded == false {
+        
+        loaded = true
+    }
 }while(true) 
 
 
