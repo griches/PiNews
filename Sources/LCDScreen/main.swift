@@ -20,6 +20,7 @@ var currentRailScreen = 0
 var displayRailScreens: [[String]] = []
 var currentPage = 0
 var fetchNewsDate = Date()
+var fetchTrainDate = Date()
 
 // MARK: - News
 struct News: Codable {
@@ -140,9 +141,6 @@ let newsURL = URL(string: "https://newsapi.org/v2/top-headlines?sources=bbc-news
 let trainURL = URL(string: "https://huxley.apphb.com/next/rys/none/ctk?accessToken=3a02290d-e8cc-4eb9-abb2-709ea77e3e69")!
 
 func loadNews(){
-
-    displayScreens = []
-    currentScreen = 0
     
     let session = URLSession.shared.dataTask(with: newsURL) { (data: Data?, response: URLResponse?, error: Error?) in
         if error != nil {
@@ -170,14 +168,15 @@ func loadNews(){
         
         do {
             let news = try JSONDecoder().decode(News.self, from: data)
-            let articles = news.articles	
+            let articles = news.articles
+            
+            displayScreens = []
+            currentScreen = 0
             
             for article in articles {
                 let splitHeadline = split(string: article.title)
                 displayScreens.append(splitHeadline)
             }
-            
-            displayInfo()
         } catch let error {
             print(error)
         }
@@ -186,9 +185,6 @@ func loadNews(){
 }
 
 func loadTrain(){
-    
-    displayRailScreens = []
-    currentRailScreen = 0
     
     let session = URLSession.shared.dataTask(with: trainURL) { (data: Data?, response: URLResponse?, error: Error?) in
         if error != nil {
@@ -211,30 +207,32 @@ func loadTrain(){
             return
         }
         // Handle Decode Data into Model
+        fetchTrainDate = Date()
+        print("Fetched train info: \(Date())")
         
         do {
             let trainInfo = try JSONDecoder().decode(TrainInfo.self, from: data)
             var splitInfo:[String] = []
+            
+            displayRailScreens = []
+            currentRailScreen = 0
             
             if let departure = trainInfo.departures?.first {
                 if let service = departure.service, let locationName = trainInfo.locationName, let destination = service.destination?.first?.locationName, let standardDeparture = service.std, let estimatedDeparture = service.etd {
                     splitInfo.append("Train service")
                     splitInfo.append("\(locationName) to \(destination)")
                     splitInfo.append("\(standardDeparture) (\(estimatedDeparture))")
-                    displayScreens.append(splitInfo)
+                    displayRailScreens.append(splitInfo)
                 }
             }
             
             if let nrccMessages = trainInfo.nrccMessages {
                 for message in nrccMessages {
                     if let splitMessage = message.value?.split(separator: ".").first {
-                        displayScreens.append(split(string: String(splitMessage)))
+                        displayRailScreens.append(split(string: String(splitMessage)))
                     }
                 }
             }
-            
-        
-            displayInfo()
         } catch let error {
             print(error)
         }
@@ -244,8 +242,9 @@ func loadTrain(){
 
 func displayInfo() {
     repeat{
-        if displayScreens.count != 0 {
-            
+        
+        if displayScreens.count != 0 && currentScreen < displayScreens.count {
+        
             let splitHeadline = displayScreens[currentScreen]
             lcd.clearScreen()
             var y = 0
@@ -266,21 +265,85 @@ func displayInfo() {
                 currentPage += 1
             }
             
-            if currentScreen == displayScreens.count {
-                
-                currentScreen = 0
-                
-                // Has enough time passed that we need to fetch the news again?
-                if fetchNewsDate.timeIntervalSinceNow <= -3600 {
-                    loadNews()
-                    return
-                }
+            // Wait for 6 seconds
+            wait(seconds: 6)
+            continue
+        } else if displayRailScreens.count != 0 && currentRailScreen < displayRailScreens.count {
+            
+            let splitHeadline = displayRailScreens[currentRailScreen]
+            lcd.clearScreen()
+            var y = 0
+            
+            let startIndex = (currentPage * height)
+            let endIndex = min((currentPage * height) + height, splitHeadline.count) // 0 based start
+            
+            for line in startIndex ..< endIndex {
+                lcd.printString(x: 0, y: y, what: splitHeadline[line], usCharSet: true)
+                y += 1
+            }
+            
+            // Have we finished the story, or do we need to scroll to the next page?
+            if endIndex == splitHeadline.count {
+                currentPage = 0
+                currentRailScreen += 1
+            } else {
+                currentPage += 1
             }
             
             // Wait for 6 seconds
             wait(seconds: 6)
+            continue
         }
+        
+        if currentScreen == displayScreens.count {
+            
+            currentScreen = 0
+            
+            // Has enough time passed that we need to fetch the news again?
+            if fetchNewsDate.timeIntervalSinceNow <= -3600 {
+                loadNews()
+            }
+        }
+        
+        if currentRailScreen == displayRailScreens.count {
+            
+            currentRailScreen = 0
+        }
+        
+        if isCorrectDayToLoadTrainFeed() {
+            // Has enough time passed that we need to fetch the rail info again?
+            if fetchTrainDate.timeIntervalSinceNow <= -180 {
+                loadTrain()
+            }
+        } else {
+            displayRailScreens = []
+            currentRailScreen = 0
+        }
+
     }while(true) 
+}
+
+func isCorrectDayToLoadTrainFeed() -> Bool {
+    return isThis(days: ["Monday", "Friday"], between: 6, and: 10, forDate: Date())
+}
+
+func isThis(days: [String], between minTime: Int, and maxTime: Int, forDate date: Date) -> Bool {
+    let weekdays = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday"
+    ]
+    
+    let calendar = Calendar.current
+    let components: DateComponents = calendar.dateComponents([.weekday, .hour], from: date)
+    let hour = components.hour!
+    let computedDay = weekdays[components.weekday! - 1]
+    
+    return days.contains(computedDay) && hour >= minTime && hour <= maxTime
 }
 
 func wait(seconds: UInt32) {
@@ -288,19 +351,11 @@ func wait(seconds: UInt32) {
 }
 
 func split(string: String) -> [String] {
-    
-    var newString = string
 
-    // Remove the source if it is there
-    if let index = string.lastIndex(of: "-") {
-        let modifiedIndex = string.index(index, offsetBy: -1)
-        newString = String(string.prefix(upTo: modifiedIndex))
-    }
-    
     var splitString:[String] = []
     var currentString = ""
     
-    let words = newString.components(separatedBy: " ")
+    let words = string.components(separatedBy: " ")
     
     for word in words {
         if currentString.isEmpty {
@@ -319,9 +374,19 @@ func split(string: String) -> [String] {
     return splitString
 }
 
+func loadFeeds() {
+
+    loadNews()
+    
+    if isCorrectDayToLoadTrainFeed() {
+        loadTrain()
+    }
+}
+
 var loaded = false
-//loadNews()
-loadTrain()
+
+loadFeeds()
+displayInfo()
 
 repeat{
     if loaded == false {
