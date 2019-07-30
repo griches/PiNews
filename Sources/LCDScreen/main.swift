@@ -14,8 +14,10 @@ var d5 = gpios[.P24]!
 var d6 = gpios[.P23]!
 var d7 = gpios[.P18]!
 let lcd = HD44780LCD(rs:rs,e:e,d7:d7,d6:d6,d5:d5,d4:d4,width:width,height:height)
-var story = 0
-var headlines: [[String]] = []
+var currentScreen = 0
+var displayScreens: [[String]] = []
+var currentRailScreen = 0
+var displayRailScreens: [[String]] = []
 var currentPage = 0
 var fetchNewsDate = Date()
 
@@ -53,37 +55,36 @@ struct Source: Codable {
 
 // MARK: - TrainInfo
 struct TrainInfo: Codable {
-    let trainServices: [TrainService]
-    let busServices, ferryServices: JSONNull?
-    let generatedAt, locationName, crs, filterLocationName: String
-    let filtercrs: String
-    let filterType: Int
-    let nrccMessages: [NrccMessage]
-    let platformAvailable, areServicesAvailable: Bool
+    let departures: [Departure]?
+    let generatedAt, locationName, crs: String?
+    let filterLocationName, filtercrs: JSONNull?
+    let filterType: Int?
+    let nrccMessages: [NrccMessage]?
+    let platformAvailable, areServicesAvailable: Bool?
 }
 
-// MARK: - NrccMessage
-struct NrccMessage: Codable {
-    let value: String
+// MARK: - Departure
+struct Departure: Codable {
+    let service: Service?
+    let crs: String?
 }
 
-// MARK: - TrainService
-struct TrainService: Codable {
-    let origin, destination: [Destination]
+// MARK: - Service
+struct Service: Codable {
+    let origin, destination: [Destination]?
     let currentOrigins, currentDestinations: JSONNull?
     let rsid, sta, eta, std: String?
-    let etd, platform, trainServiceOperator, operatorCode: String?
-    let isCircularRoute, isCancelled, filterLocationCancelled: Bool
-    let serviceType, length: Int
-    let detachFront, isReverseFormation: Bool
-    let cancelReason: JSONNull?
-    let delayReason, serviceID, serviceIDPercentEncoded, serviceIDGUID: String?
-    let serviceIDURLSafe: String?
+    let etd, platform, serviceOperator, operatorCode: String?
+    let isCircularRoute, isCancelled, filterLocationCancelled: Bool?
+    let serviceType, length: Int?
+    let detachFront, isReverseFormation: Bool?
+    let cancelReason, delayReason: JSONNull?
+    let serviceID, serviceIDPercentEncoded, serviceIDGUID, serviceIDURLSafe: String?
     let adhocAlerts: JSONNull?
     
     enum CodingKeys: String, CodingKey {
         case origin, destination, currentOrigins, currentDestinations, rsid, sta, eta, std, etd, platform
-        case trainServiceOperator = "operator"
+        case serviceOperator = "operator"
         case operatorCode, isCircularRoute, isCancelled, filterLocationCancelled, serviceType, length, detachFront, isReverseFormation, cancelReason, delayReason, serviceID
         case serviceIDPercentEncoded = "serviceIdPercentEncoded"
         case serviceIDGUID = "serviceIdGuid"
@@ -94,10 +95,14 @@ struct TrainService: Codable {
 
 // MARK: - Destination
 struct Destination: Codable {
-    let locationName, crs: String
-    let via: String?
-    let futureChangeTo: JSONNull?
-    let assocIsCancelled: Bool
+    let locationName, crs: String?
+    let via, futureChangeTo: JSONNull?
+    let assocIsCancelled: Bool?
+}
+
+// MARK: - NrccMessage
+struct NrccMessage: Codable {
+    let value: String?
 }
 
 // MARK: - Encode/decode helpers
@@ -131,21 +136,19 @@ class JSONNull: Codable, Hashable {
     }
 }
 
-let newsURL = URL(string: "https://newsapi.org/v2/top-headlines?country=us&apiKey=2c5ede941f6546c0a3ce330b9c03af8b")!
-let trainURL = URL(string: "https://huxley.apphb.com/all/gtw/from/vic/1?accessToken=DA1C7740-9DA0-11E4-80E6-A920340000B1")!
+let newsURL = URL(string: "https://newsapi.org/v2/top-headlines?sources=bbc-news&apiKey=2c5ede941f6546c0a3ce330b9c03af8b")!
+let trainURL = URL(string: "https://huxley.apphb.com/next/rys/none/ctk?accessToken=3a02290d-e8cc-4eb9-abb2-709ea77e3e69")!
 
 func loadNews(){
-    
-    print()
-    
-    headlines = []
-    story = 0
+
+    displayScreens = []
+    currentScreen = 0
     
     let session = URLSession.shared.dataTask(with: newsURL) { (data: Data?, response: URLResponse?, error: Error?) in
         if error != nil {
             // Handle Error
             print("error")
-            usleep(6000*1000)
+            wait(seconds: 6)
             loadNews()
             return
         }
@@ -157,7 +160,7 @@ func loadNews(){
         guard let data = data else {
             print("empty data")
             // Handle Empty Data
-            usleep(6000*1000)
+            wait(seconds: 6)
             loadNews()
             return
         }
@@ -170,8 +173,8 @@ func loadNews(){
             let articles = news.articles	
             
             for article in articles {
-                let splitHeadline = split(headline: article.title)
-                headlines.append(splitHeadline)
+                let splitHeadline = split(string: article.title)
+                displayScreens.append(splitHeadline)
             }
             
             displayInfo()
@@ -184,13 +187,15 @@ func loadNews(){
 
 func loadTrain(){
     
-    headlines = []
-    story = 0
+    displayRailScreens = []
+    currentRailScreen = 0
     
     let session = URLSession.shared.dataTask(with: trainURL) { (data: Data?, response: URLResponse?, error: Error?) in
         if error != nil {
             // Handle Error
             print("error")
+            wait(seconds: 6)
+            loadTrain()
             return
         }
         if response != nil {
@@ -201,13 +206,35 @@ func loadTrain(){
         guard let data = data else {
             print("empty data")
             // Handle Empty Data
+            wait(seconds: 6)
+            loadTrain()
             return
         }
         // Handle Decode Data into Model
         
         do {
             let trainInfo = try JSONDecoder().decode(TrainInfo.self, from: data)
+            var splitInfo:[String] = []
             
+            if let departure = trainInfo.departures?.first {
+                if let service = departure.service, let locationName = trainInfo.locationName, let destination = service.destination?.first?.locationName, let standardDeparture = service.std, let estimatedDeparture = service.etd {
+                    splitInfo.append("Train service")
+                    splitInfo.append("\(locationName) to \(destination)")
+                    splitInfo.append("\(standardDeparture) (\(estimatedDeparture))")
+                    displayScreens.append(splitInfo)
+                }
+            }
+            
+            if let nrccMessages = trainInfo.nrccMessages {
+                for message in nrccMessages {
+                    if let splitMessage = message.value?.split(separator: ".").first {
+                        displayScreens.append(split(string: String(splitMessage)))
+                    }
+                }
+            }
+            
+        
+            displayInfo()
         } catch let error {
             print(error)
         }
@@ -217,18 +244,16 @@ func loadTrain(){
 
 func displayInfo() {
     repeat{
-        if headlines.count != 0 {
+        if displayScreens.count != 0 {
             
-            let splitHeadline = headlines[story]
+            let splitHeadline = displayScreens[currentScreen]
             lcd.clearScreen()
             var y = 0
 
             let startIndex = (currentPage * height)
             let endIndex = min((currentPage * height) + height, splitHeadline.count) // 0 based start
-            print("start \(startIndex)")
-            print("end \(endIndex)")
+
             for line in startIndex ..< endIndex {
-                print("line: \(line)     headline:\(splitHeadline[line])")
                 lcd.printString(x: 0, y: y, what: splitHeadline[line], usCharSet: true)
                 y += 1
             }
@@ -236,14 +261,14 @@ func displayInfo() {
             // Have we finished the story, or do we need to scroll to the next page?
             if endIndex == splitHeadline.count {
                 currentPage = 0
-                story += 1
+                currentScreen += 1
             } else {
                 currentPage += 1
             }
             
-            if story == headlines.count {
+            if currentScreen == displayScreens.count {
                 
-                story = 0
+                currentScreen = 0
                 
                 // Has enough time passed that we need to fetch the news again?
                 if fetchNewsDate.timeIntervalSinceNow <= -3600 {
@@ -262,12 +287,20 @@ func wait(seconds: UInt32) {
     usleep((seconds * 1000) * 1000)
 }
 
-func split(headline: String) -> [String] {
+func split(string: String) -> [String] {
     
-    var splitHeadline:[String] = []
+    var newString = string
+
+    // Remove the source if it is there
+    if let index = string.lastIndex(of: "-") {
+        let modifiedIndex = string.index(index, offsetBy: -1)
+        newString = String(string.prefix(upTo: modifiedIndex))
+    }
+    
+    var splitString:[String] = []
     var currentString = ""
     
-    let words = headline.components(separatedBy: " ")
+    let words = newString.components(separatedBy: " ")
     
     for word in words {
         if currentString.isEmpty {
@@ -275,19 +308,19 @@ func split(headline: String) -> [String] {
         } else if currentString.count + word.count < 20 {
             currentString += " " + word
         } else {
-            splitHeadline.append(currentString)
+            splitString.append(currentString)
             currentString = word
         }
     }
-    if splitHeadline.last != currentString {
-        splitHeadline.append(currentString)
+    if splitString.last != currentString {
+        splitString.append(currentString)
     }
-    
-    return splitHeadline
+
+    return splitString
 }
 
 var loaded = false
-loadNews()
+//loadNews()
 loadTrain()
 
 repeat{
