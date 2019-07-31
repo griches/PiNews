@@ -3,28 +3,21 @@ import Foundation
 import Glibc
 import HD44780LCD
 
-let width = 20
-let height = 4
+// MARK: - Fact
+struct Fact: Codable {
+    let id, text, source: String?
+    let sourceURL: String?
+    let language: String?
+    let permalink: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, text, source
+        case sourceURL = "source_url"
+        case language, permalink
+    }
+}
 
-let gpios = SwiftyGPIO.GPIOs(for: .RaspberryPi2)
-var rs = gpios[.P27]!
-var e = gpios[.P22]!
-var d4 = gpios[.P25]!
-var d5 = gpios[.P24]!
-var d6 = gpios[.P23]!
-var d7 = gpios[.P18]!
-let lcd = HD44780LCD(rs:rs,e:e,d7:d7,d6:d6,d5:d5,d4:d4,width:width,height:height)
-var currentScreen = 0
-var displayScreens: [[String]] = []
-var currentRailScreen = 0
-var displayRailScreens: [[String]] = []
-var currentPage = 0
-var fetchNewsDate = Date()
-var fetchTrainDate = Date()
-
-// Interval is in seconds * minutes
-let newsFetchInterval: TimeInterval = 60 * 10
-let trainFetchInterval: TimeInterval = 60 * 2
+// MARK: - End Fact
 
 // MARK: - News
 struct News: Codable {
@@ -57,6 +50,7 @@ struct Source: Codable {
     let name: String
 }
 
+// MARK: - End News
 
 // MARK: - TrainInfo
 struct TrainInfo: Codable {
@@ -141,28 +135,53 @@ class JSONNull: Codable, Hashable {
     }
 }
 
+// MARK: - End TrainInfo
+
+let width = 20
+let height = 4
+
+let gpios = SwiftyGPIO.GPIOs(for: .RaspberryPi2)
+var rs = gpios[.P27]!
+var e = gpios[.P22]!
+var d4 = gpios[.P25]!
+var d5 = gpios[.P24]!
+var d6 = gpios[.P23]!
+var d7 = gpios[.P18]!
+let lcd = HD44780LCD(rs:rs,e:e,d7:d7,d6:d6,d5:d5,d4:d4,width:width,height:height)
+var currentScreen = 0
+var displayScreens: [[String]] = []
+var currentRailScreen = 0
+var displayRailScreens: [[String]] = []
+var currentFactScreen = 0
+var displayFactScreens: [[String]] = []
+var currentPage = 0
+var fetchNewsDate = Date()
+var fetchTrainDate = Date()
+var fetchFactDate = Date()
+
+// Interval is in seconds * minutes
+let newsFetchInterval: TimeInterval = 60 * 10
+let trainFetchInterval: TimeInterval = 60 * 2
+let factFetchInterval: TimeInterval = 60 * 30
+
 let newsURL = URL(string: "https://newsapi.org/v2/top-headlines?sources=bbc-news&apiKey=2c5ede941f6546c0a3ce330b9c03af8b")!
 let trainURL = URL(string: "https://huxley.apphb.com/next/rys/none/ctk?accessToken=3a02290d-e8cc-4eb9-abb2-709ea77e3e69")!
+let factURL = URL(string: "https://uselessfacts.jsph.pl/random.json?language=en")!
 
-func loadNews(){
+func loadNews(closure: (()->())? = nil){
     
     let session = URLSession.shared.dataTask(with: newsURL) { (data: Data?, response: URLResponse?, error: Error?) in
         if error != nil {
             // Handle Error
-            print("error")
-            wait(seconds: 6)
+            print("News error")
+            usleep(6000 * 1000)
             loadNews()
             return
         }
-        if response != nil {
-            // Handle Empty Response
-            print("empty response")
-            //return
-        }
         guard let data = data else {
-            print("empty data")
+            print("empty news data")
             // Handle Empty Data
-            wait(seconds: 6)
+            usleep(6000 * 1000)
             loadNews()
             return
         }
@@ -181,6 +200,8 @@ func loadNews(){
                 let splitHeadline = split(string: article.title)
                 displayScreens.append(splitHeadline)
             }
+            
+            closure?()
         } catch let error {
             print(error)
         }
@@ -188,25 +209,20 @@ func loadNews(){
     session.resume()
 }
 
-func loadTrain(){
+func loadTrain(closure: (()->())? = nil){
     
     let session = URLSession.shared.dataTask(with: trainURL) { (data: Data?, response: URLResponse?, error: Error?) in
         if error != nil {
             // Handle Error
-            print("error")
-            wait(seconds: 6)
+            print("Train error")
+            usleep(6000 * 1000)
             loadTrain()
             return
         }
-        if response != nil {
-            // Handle Empty Response
-            print("empty response")
-            //return
-        }
         guard let data = data else {
-            print("empty data")
+            print("empty train data")
             // Handle Empty Data
-            wait(seconds: 6)
+            usleep(6000 * 1000)
             loadTrain()
             return
         }
@@ -237,6 +253,49 @@ func loadTrain(){
                     }
                 }
             }
+            
+            closure?()
+        } catch let error {
+            print(error)
+        }
+    }
+    session.resume()
+}
+
+func loadFact(closure: (()->())? = nil){
+    
+    let session = URLSession.shared.dataTask(with: factURL) { (data: Data?, response: URLResponse?, error: Error?) in
+        if error != nil {
+            // Handle Error
+            print("Fact error")
+            usleep(6000 * 1000)
+            loadFact()
+            return
+        }
+        guard let data = data else {
+            print("empty fact data")
+            // Handle Empty Data
+            usleep(6000 * 1000)
+            loadFact()
+            return
+        }
+        // Handle Decode Data into Model
+        fetchFactDate = Date()
+        print("Fetched fact: \(Date())")
+        
+        do {
+            let fact = try JSONDecoder().decode(Fact.self, from: data)
+
+            displayFactScreens = []
+            currentFactScreen = 0
+            
+            if let factText = fact.text {
+                var splitFact = split(string: factText)
+                splitFact.insert("Fact:", at: 0)
+                displayFactScreens.append(splitFact)
+            }
+            
+            closure?()
         } catch let error {
             print(error)
         }
@@ -245,9 +304,12 @@ func loadTrain(){
 }
 
 func displayInfo() {
-    repeat{
-        
+    
+    repeat {
+
         if displayScreens.count != 0 && currentScreen < displayScreens.count {
+            
+            print("Displaying story \(currentScreen + 1) of \(displayScreens.count)")
         
             let splitHeadline = displayScreens[currentScreen]
             lcd.clearScreen()
@@ -270,9 +332,12 @@ func displayInfo() {
             }
             
             // Wait for 6 seconds
-            wait(seconds: 6)
+            usleep(6000 * 1000)
+            
             continue
         } else if displayRailScreens.count != 0 && currentRailScreen < displayRailScreens.count {
+            
+            print("Displaying rail \(currentScreen + 1) of \(displayScreens.count)")
             
             let splitHeadline = displayRailScreens[currentRailScreen]
             lcd.clearScreen()
@@ -295,12 +360,42 @@ func displayInfo() {
             }
             
             // Wait for 6 seconds
-            wait(seconds: 6)
+            usleep(6000 * 1000)
+            
+            continue
+        } else if displayFactScreens.count != 0 && currentFactScreen < displayFactScreens.count {
+            
+            print("Displaying fact \(currentFactScreen + 1) of \(displayFactScreens.count)")
+            
+            let splitHeadline = displayFactScreens[currentFactScreen]
+            lcd.clearScreen()
+            var y = 0
+            
+            let startIndex = (currentPage * height)
+            let endIndex = min((currentPage * height) + height, splitHeadline.count) // 0 based start
+            
+            for line in startIndex ..< endIndex {
+                lcd.printString(x: 0, y: y, what: splitHeadline[line], usCharSet: true)
+                y += 1
+            }
+            
+            // Have we finished the story, or do we need to scroll to the next page?
+            if endIndex == splitHeadline.count {
+                currentPage = 0
+                currentFactScreen += 1
+            } else {
+                currentPage += 1
+            }
+            
+            // Wait for 6 seconds
+            usleep(6000 * 1000)
+            
             continue
         }
         
+        print("\n\nResetting\n\n")
+        
         if currentScreen == displayScreens.count {
-            
             currentScreen = 0
             
             // Has enough time passed that we need to fetch the news again?
@@ -310,7 +405,6 @@ func displayInfo() {
         }
         
         if currentRailScreen == displayRailScreens.count {
-            
             currentRailScreen = 0
         }
         
@@ -323,8 +417,16 @@ func displayInfo() {
             displayRailScreens = []
             currentRailScreen = 0
         }
-
-    }while(true) 
+        
+        if currentFactScreen == displayFactScreens.count {
+            currentFactScreen = 0
+            
+            // Has enough time passed that we need to fetch the fact again?
+            if fetchFactDate.timeIntervalSinceNow <= -factFetchInterval {
+                loadFact()
+            }
+        }
+    } while (true)
 }
 
 func isCorrectDayToLoadTrainFeed() -> Bool {
@@ -379,26 +481,18 @@ func split(string: String) -> [String] {
 }
 
 func loadFeeds() {
-
-    loadNews()
-    
-    if isCorrectDayToLoadTrainFeed() {
-        loadTrain()
+    print("🥰 LOADING FEEDS")
+    loadNews() {
+        loadFact() {
+            if isCorrectDayToLoadTrainFeed() {
+                loadTrain()
+            }
+        }
     }
 }
-
-var loaded = false
 
 loadFeeds()
 displayInfo()
 
-repeat{
-    if loaded == false {
-        
-        loaded = true
-    }
-} while (true) 
-
-
-
-
+repeat {
+} while (true)
