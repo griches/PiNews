@@ -174,14 +174,14 @@ func loadNews(closure: (()->())? = nil){
         if error != nil {
             // Handle Error
             print("News error")
-            usleep(6000 * 1000)
+            wait(seconds: 6)
             loadNews()
             return
         }
         guard let data = data else {
-            print("empty news data")
+            print("Empty news data")
             // Handle Empty Data
-            usleep(6000 * 1000)
+            wait(seconds: 6)
             loadNews()
             return
         }
@@ -215,14 +215,14 @@ func loadTrain(closure: (()->())? = nil){
         if error != nil {
             // Handle Error
             print("Train error")
-            usleep(6000 * 1000)
+            wait(seconds: 6)
             loadTrain()
             return
         }
         guard let data = data else {
-            print("empty train data")
+            print("Empty train data")
             // Handle Empty Data
-            usleep(6000 * 1000)
+            wait(seconds: 6)
             loadTrain()
             return
         }
@@ -268,14 +268,14 @@ func loadFact(closure: (()->())? = nil){
         if error != nil {
             // Handle Error
             print("Fact error")
-            usleep(6000 * 1000)
+            wait(seconds: 6)
             loadFact()
             return
         }
         guard let data = data else {
-            print("empty fact data")
+            print("Empty fact data")
             // Handle Empty Data
-            usleep(6000 * 1000)
+            wait(seconds: 6)
             loadFact()
             return
         }
@@ -332,7 +332,7 @@ func displayInfo() {
             }
             
             // Wait for 6 seconds
-            usleep(6000 * 1000)
+            wait(seconds: 6)
             
             continue
         } else if displayRailScreens.count != 0 && currentRailScreen < displayRailScreens.count {
@@ -360,7 +360,7 @@ func displayInfo() {
             }
             
             // Wait for 6 seconds
-            usleep(6000 * 1000)
+            wait(seconds: 6)
             
             continue
         } else if displayFactScreens.count != 0 && currentFactScreen < displayFactScreens.count {
@@ -388,12 +388,10 @@ func displayInfo() {
             }
             
             // Wait for 6 seconds
-            usleep(6000 * 1000)
+            wait(seconds: 6)
             
             continue
         }
-        
-        print("\n\nResetting\n\n")
         
         if currentScreen == displayScreens.count {
             currentScreen = 0
@@ -481,7 +479,7 @@ func split(string: String) -> [String] {
 }
 
 func loadFeeds() {
-    print("🥰 LOADING FEEDS")
+    print("\nLoading Feeds")
     loadNews() {
         loadFact() {
             if isCorrectDayToLoadTrainFeed() {
