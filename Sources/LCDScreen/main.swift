@@ -22,6 +22,10 @@ var currentPage = 0
 var fetchNewsDate = Date()
 var fetchTrainDate = Date()
 
+// Interval is in seconds * minutes
+let newsFetchInterval: TimeInterval = 60 * 10
+let trainFetchInterval: TimeInterval = 60 * 2
+
 // MARK: - News
 struct News: Codable {
     let status: String
@@ -300,7 +304,7 @@ func displayInfo() {
             currentScreen = 0
             
             // Has enough time passed that we need to fetch the news again?
-            if fetchNewsDate.timeIntervalSinceNow <= -3600 {
+            if fetchNewsDate.timeIntervalSinceNow <= -newsFetchInterval {
                 loadNews()
             }
         }
@@ -312,7 +316,7 @@ func displayInfo() {
         
         if isCorrectDayToLoadTrainFeed() {
             // Has enough time passed that we need to fetch the rail info again?
-            if fetchTrainDate.timeIntervalSinceNow <= -180 {
+            if fetchTrainDate.timeIntervalSinceNow <= -trainFetchInterval {
                 loadTrain()
             }
         } else {
@@ -393,7 +397,7 @@ repeat{
         
         loaded = true
     }
-}while(true) 
+} while (true) 
 
 
 
