@@ -140,6 +140,8 @@ class JSONNull: Codable, Hashable {
 let width = 20
 let height = 4
 
+let formatter = DateFormatter()
+
 let gpios = SwiftyGPIO.GPIOs(for: .RaspberryPi2)
 var rs = gpios[.P27]!
 var e = gpios[.P22]!
@@ -154,19 +156,24 @@ var currentRailScreen = 0
 var displayRailScreens: [[String]] = []
 var currentFactScreen = 0
 var displayFactScreens: [[String]] = []
+var currentCalendarScreen = 0
+var displayCalendarScreens: [[String]] = []
 var currentPage = 0
 var fetchNewsDate = Date()
 var fetchTrainDate = Date()
 var fetchFactDate = Date()
+var fetchCalendarDate = Date()
 
 // Interval is in seconds * minutes
 let newsFetchInterval: TimeInterval = 60 * 10
 let trainFetchInterval: TimeInterval = 60 * 2
 let factFetchInterval: TimeInterval = 60 * 30
+let calendarFetchInterval: TimeInterval = 60 * 60 * 5
 
 let newsURL = URL(string: "https://newsapi.org/v2/top-headlines?sources=bbc-news&apiKey=2c5ede941f6546c0a3ce330b9c03af8b")!
 let trainURL = URL(string: "https://huxley.apphb.com/next/rys/none/ctk?accessToken=3a02290d-e8cc-4eb9-abb2-709ea77e3e69")!
 let factURL = URL(string: "https://uselessfacts.jsph.pl/random.json?language=en")!
+let calendarURL = URL(string: "http://p57-calendars.icloud.com/published/2/MTMzOTU1MTA3NzEzMzk1NceTE2UwoBF7JX5n7L9RtkzXEF2XkEuP0ZshMqnZSlpxYhAYO8WWRvrmaTab9fyXH8HltnUOIx4RUC-kb8RxmJY")!
 
 func loadNews(closure: (()->())? = nil){
     
@@ -207,6 +214,48 @@ func loadNews(closure: (()->())? = nil){
         }
     }
     session.resume()
+}
+
+func loadCalendar(closure: (()->())? = nil){
+
+    let cals = try! iCal.load(url: calendarURL)
+    
+    for cal in cals {
+        
+        displayCalendarScreens = []
+        currentCalendarScreen = 0
+        fetchCalendarDate = Date()
+        
+        for event in cal.subComponents where event is Event {
+            if let event = event as? Event {
+                if let endDate = event.dtend {
+                    
+                    let today = Date()
+                    let nextDate = NSCalendar.current.date(byAdding: .day, value: 14, to: today)!
+                    
+                    if endDate > today && endDate < nextDate {
+                        
+                        var splitInfo:[String] = []
+                        
+                        if let summary = event.summary {
+                            splitInfo = split(string: summary)
+                        }
+                        
+                        if let start = event.dtstart, let end = event.dtend {
+                            
+                            if start < today {
+                                splitInfo.append("End: \(formatter.string(from: end))")
+                            } else {
+                                splitInfo.append("\(formatter.string(from: start))")
+                            }
+                        }
+                        
+                        displayCalendarScreens.append(splitInfo)
+                    }
+                }
+            }
+        }
+    }
 }
 
 func loadTrain(closure: (()->())? = nil){
@@ -391,6 +440,34 @@ func displayInfo() {
             wait(seconds: 6)
             
             continue
+        } else if displayCalendarScreens.count != 0 && currentCalendarScreen < displayCalendarScreens.count {
+            
+            print("Displaying calendar \(currentCalendarScreen + 1) of \(displayCalendarScreens.count)")
+            
+            let splitHeadline = displayCalendarScreens[currentCalendarScreen]
+            lcd.clearScreen()
+            var y = 0
+            
+            let startIndex = (currentPage * height)
+            let endIndex = min((currentPage * height) + height, splitHeadline.count) // 0 based start
+            
+            for line in startIndex ..< endIndex {
+                lcd.printString(x: 0, y: y, what: splitHeadline[line], usCharSet: true)
+                y += 1
+            }
+            
+            // Have we finished the story, or do we need to scroll to the next page?
+            if endIndex == splitHeadline.count {
+                currentPage = 0
+                currentCalendarScreen += 1
+            } else {
+                currentPage += 1
+            }
+            
+            // Wait for 6 seconds
+            wait(seconds: 6)
+            
+            continue
         }
         
         if currentScreen == displayScreens.count {
@@ -422,6 +499,15 @@ func displayInfo() {
             // Has enough time passed that we need to fetch the fact again?
             if fetchFactDate.timeIntervalSinceNow <= -factFetchInterval {
                 loadFact()
+            }
+        }
+        
+        if currentCalendarScreen == displayCalendarScreens.count {
+            currentCalendarScreen = 0
+            
+            // Has enough time passed that we need to fetch the fact again?
+            if fetchCalendarDate.timeIntervalSinceNow <= -calendarFetchInterval {
+                loadCalendar()
             }
         }
     } while (true)
@@ -483,12 +569,16 @@ func loadFeeds() {
     loadNews() {
         loadFact() {
             if isCorrectDayToLoadTrainFeed() {
-                loadTrain()
+                loadTrain() {
+            
+                }
             }
+            loadCalendar()
         }
     }
 }
 
+formatter.dateFormat = "dd MMM '@' HH:mm"
 loadFeeds()
 displayInfo()
 

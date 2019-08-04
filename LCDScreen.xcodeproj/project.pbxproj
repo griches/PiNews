@@ -21,6 +21,16 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		B123000722F621E600EDDC60 /* iCal.swift in Sources */ = {isa = PBXBuildFile; fileRef = B123FFFD22F621E600EDDC60 /* iCal.swift */; };
+		B123000822F621E600EDDC60 /* CalendarComponent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B123FFFE22F621E600EDDC60 /* CalendarComponent.swift */; };
+		B123000922F621E600EDDC60 /* Parser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B123FFFF22F621E600EDDC60 /* Parser.swift */; };
+		B123000A22F621E600EDDC60 /* iCalError.swift in Sources */ = {isa = PBXBuildFile; fileRef = B123000022F621E600EDDC60 /* iCalError.swift */; };
+		B123000B22F621E600EDDC60 /* Calendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B123000122F621E600EDDC60 /* Calendar.swift */; };
+		B123000C22F621E600EDDC60 /* Alarm.swift in Sources */ = {isa = PBXBuildFile; fileRef = B123000222F621E600EDDC60 /* Alarm.swift */; };
+		B123000D22F621E600EDDC60 /* IcsElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = B123000322F621E600EDDC60 /* IcsElement.swift */; };
+		B123000E22F621E600EDDC60 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = B123000422F621E600EDDC60 /* Event.swift */; };
+		B123000F22F621E600EDDC60 /* String.swift in Sources */ = {isa = PBXBuildFile; fileRef = B123000522F621E600EDDC60 /* String.swift */; };
+		B123001022F621E600EDDC60 /* Date.swift in Sources */ = {isa = PBXBuildFile; fileRef = B123000622F621E600EDDC60 /* Date.swift */; };
 		OBJ_38 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_10 /* main.swift */; };
 		OBJ_40 /* SwiftyGPIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = "SwiftyGPIO::SwiftyGPIO::Product" /* SwiftyGPIO.framework */; };
 		OBJ_48 /* Package.swift in Sources */ = {isa = PBXBuildFile; fileRef = OBJ_6 /* Package.swift */; };
@@ -72,6 +82,16 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		B123000022F621E600EDDC60 /* iCalError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = iCalError.swift; sourceTree = "<group>"; };
+		B123000122F621E600EDDC60 /* Calendar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Calendar.swift; sourceTree = "<group>"; };
+		B123000222F621E600EDDC60 /* Alarm.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Alarm.swift; sourceTree = "<group>"; };
+		B123000322F621E600EDDC60 /* IcsElement.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IcsElement.swift; sourceTree = "<group>"; };
+		B123000422F621E600EDDC60 /* Event.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Event.swift; sourceTree = "<group>"; };
+		B123000522F621E600EDDC60 /* String.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = String.swift; sourceTree = "<group>"; };
+		B123000622F621E600EDDC60 /* Date.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Date.swift; sourceTree = "<group>"; };
+		B123FFFD22F621E600EDDC60 /* iCal.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = iCal.swift; sourceTree = "<group>"; };
+		B123FFFE22F621E600EDDC60 /* CalendarComponent.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CalendarComponent.swift; sourceTree = "<group>"; };
+		B123FFFF22F621E600EDDC60 /* Parser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Parser.swift; sourceTree = "<group>"; };
 		"LCDScreen::LCDScreen::Product" /* LCDScreen */ = {isa = PBXFileReference; lastKnownFileType = text; path = LCDScreen; sourceTree = BUILT_PRODUCTS_DIR; };
 		"LCDScreen::LCDScreenTests::Product" /* LCDScreenTests.xctest */ = {isa = PBXFileReference; lastKnownFileType = file; path = LCDScreenTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		OBJ_10 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -174,7 +194,7 @@
 			name = Products;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		OBJ_5 /*  */ = {
+		OBJ_5 = {
 			isa = PBXGroup;
 			children = (
 				OBJ_6 /* Package.swift */,
@@ -183,7 +203,6 @@
 				OBJ_15 /* Dependencies */,
 				OBJ_28 /* Products */,
 			);
-			name = "";
 			sourceTree = "<group>";
 		};
 		OBJ_7 /* Sources */ = {
@@ -197,6 +216,16 @@
 		OBJ_8 /* LCDScreen */ = {
 			isa = PBXGroup;
 			children = (
+				B123000222F621E600EDDC60 /* Alarm.swift */,
+				B123000122F621E600EDDC60 /* Calendar.swift */,
+				B123FFFE22F621E600EDDC60 /* CalendarComponent.swift */,
+				B123000622F621E600EDDC60 /* Date.swift */,
+				B123000422F621E600EDDC60 /* Event.swift */,
+				B123FFFD22F621E600EDDC60 /* iCal.swift */,
+				B123000022F621E600EDDC60 /* iCalError.swift */,
+				B123000322F621E600EDDC60 /* IcsElement.swift */,
+				B123FFFF22F621E600EDDC60 /* Parser.swift */,
+				B123000522F621E600EDDC60 /* String.swift */,
 				OBJ_10 /* main.swift */,
 			);
 			name = LCDScreen;
@@ -325,7 +354,7 @@
 				English,
 				en,
 			);
-			mainGroup = OBJ_5 /*  */;
+			mainGroup = OBJ_5;
 			productRefGroup = OBJ_28 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -346,6 +375,16 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 0;
 			files = (
+				B123000922F621E600EDDC60 /* Parser.swift in Sources */,
+				B123000E22F621E600EDDC60 /* Event.swift in Sources */,
+				B123000F22F621E600EDDC60 /* String.swift in Sources */,
+				B123000B22F621E600EDDC60 /* Calendar.swift in Sources */,
+				B123000A22F621E600EDDC60 /* iCalError.swift in Sources */,
+				B123000822F621E600EDDC60 /* CalendarComponent.swift in Sources */,
+				B123000D22F621E600EDDC60 /* IcsElement.swift in Sources */,
+				B123000722F621E600EDDC60 /* iCal.swift in Sources */,
+				B123001022F621E600EDDC60 /* Date.swift in Sources */,
+				B123000C22F621E600EDDC60 /* Alarm.swift in Sources */,
 				OBJ_38 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
