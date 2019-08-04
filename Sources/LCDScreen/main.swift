@@ -216,46 +216,70 @@ func loadNews(closure: (()->())? = nil){
     session.resume()
 }
 
-func loadCalendar(closure: (()->())? = nil){
+func loadCalendar() {
 
-    let cals = try! iCal.load(url: calendarURL)
-    
-    for cal in cals {
+    let session = URLSession.shared.dataTask(with: calendarURL) { (data: Data?, response: URLResponse?, error: Error?) in
+        if error != nil {
+            // Handle Error
+            print("Calendar error")
+            wait(seconds: 6)
+            loadCalendar()
+            return
+        }
+        guard let data = data else {
+            print("Empty calendar data")
+            // Handle Empty Data
+            wait(seconds: 6)
+            loadCalendar()
+            return
+        }
         
-        displayCalendarScreens = []
-        currentCalendarScreen = 0
+        let string = String(data: data, encoding: .utf8)
+        let cals = iCal.load(string: string!)
+        
         fetchCalendarDate = Date()
+        print("Fetched calendar info: \(Date())")
         
-        for event in cal.subComponents where event is Event {
-            if let event = event as? Event {
-                if let endDate = event.dtend {
-                    
-                    let today = Date()
-                    let nextDate = NSCalendar.current.date(byAdding: .day, value: 14, to: today)!
-                    
-                    if endDate > today && endDate < nextDate {
+        for cal in cals {
+            
+            displayCalendarScreens = []
+            currentCalendarScreen = 0
+            fetchCalendarDate = Date()
+            
+            for event in cal.subComponents where event is Event {
+                if let event = event as? Event {
+                    if let endDate = event.dtend {
                         
-                        var splitInfo:[String] = []
+                        let today = Date()
+                        let nextDate = NSCalendar.current.date(byAdding: .day, value: 14, to: today)!
                         
-                        if let summary = event.summary {
-                            splitInfo = split(string: summary)
-                        }
-                        
-                        if let start = event.dtstart, let end = event.dtend {
+                        if endDate > today && endDate < nextDate {
                             
-                            if start < today {
-                                splitInfo.append("End: \(formatter.string(from: end))")
-                            } else {
-                                splitInfo.append("\(formatter.string(from: start))")
+                            var splitInfo:[String] = []
+                            
+                            if let summary = event.summary {
+                                splitInfo = split(string: summary)
                             }
+                            
+                            if let start = event.dtstart, let end = event.dtend {
+                                
+                                if start < today {
+                                    let endDateString = relativeDateString(from: end, showTime: false)
+                                    splitInfo.append("Ends \(endDateString)")
+                                } else {
+                                    let startDateString = relativeDateString(from: start, showTime: true)
+                                    splitInfo.append(startDateString)
+                                }
+                            }
+                            
+                            displayCalendarScreens.append(splitInfo)
                         }
-                        
-                        displayCalendarScreens.append(splitInfo)
                     }
                 }
             }
         }
     }
+    session.resume()
 }
 
 func loadTrain(closure: (()->())? = nil){
@@ -564,6 +588,51 @@ func split(string: String) -> [String] {
     return splitString
 }
 
+func relativeDateString(from date : Date, showTime: Bool = true) -> String {
+    
+    if showTime {
+        
+        let calendar = Calendar.current
+        if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        } else if calendar.isDateInToday(date) {
+            return "Today at \(formatter.string(from: date))"
+        } else if calendar.isDateInTomorrow(date) {
+            return "Tomorrow at \(formatter.string(from: date))"
+        } else {
+            let startOfNow = calendar.startOfDay(for: Date())
+            let startOfTimeStamp = calendar.startOfDay(for: date)
+            let components = calendar.dateComponents([.day], from: startOfNow, to: startOfTimeStamp)
+            let day = components.day!
+            if day < 1 {
+                return "\(-day) days ago"
+            } else {
+                return "In \(day) days at \(formatter.string(from: date))"
+            }
+        }
+    } else {
+        
+        let calendar = Calendar.current
+        if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        } else if calendar.isDateInToday(date) {
+            return "Today"
+        } else if calendar.isDateInTomorrow(date) {
+            return "Tomorrow"
+        } else {
+            let startOfNow = calendar.startOfDay(for: Date())
+            let startOfTimeStamp = calendar.startOfDay(for: date)
+            let components = calendar.dateComponents([.day], from: startOfNow, to: startOfTimeStamp)
+            let day = components.day!
+            if day < 1 {
+                return "\(-day) days ago"
+            } else {
+                return "In \(day) days"
+            }
+        }
+    }
+}
+
 func loadFeeds() {
     print("\nLoading Feeds")
     loadNews() {
@@ -578,7 +647,7 @@ func loadFeeds() {
     }
 }
 
-formatter.dateFormat = "dd MMM '@' HH:mm"
+formatter.dateFormat = "HH:mm"
 loadFeeds()
 displayInfo()
 
