@@ -168,7 +168,7 @@ var fetchCalendarDate = Date()
 let newsFetchInterval: TimeInterval = 60 * 10
 let trainFetchInterval: TimeInterval = 60 * 2
 let factFetchInterval: TimeInterval = 60 * 30
-let calendarFetchInterval: TimeInterval = 60 * 60 * 5
+let calendarFetchInterval: TimeInterval = 60 * 60
 
 let newsURL = URL(string: "https://newsapi.org/v2/top-headlines?sources=bbc-news&apiKey=2c5ede941f6546c0a3ce330b9c03af8b")!
 let trainURL = URL(string: "https://huxley.apphb.com/next/rys/none/ctk?accessToken=3a02290d-e8cc-4eb9-abb2-709ea77e3e69")!
@@ -216,7 +216,7 @@ func loadNews(closure: (()->())? = nil){
     session.resume()
 }
 
-func loadCalendar() {
+func loadCalendar(closure: (()->())? = nil) {
 
     let session = URLSession.shared.dataTask(with: calendarURL) { (data: Data?, response: URLResponse?, error: Error?) in
         if error != nil {
@@ -264,7 +264,7 @@ func loadCalendar() {
                             if let start = event.dtstart, let end = event.dtend {
                                 
                                 if start < today {
-                                    let endDateString = relativeDateString(from: end, showTime: false)
+                                    let endDateString = relativeDateString(from: end, showTime: false, capitaliseIn: false)
                                     splitInfo.append("Ends \(endDateString)")
                                 } else {
                                     let startDateString = relativeDateString(from: start, showTime: true)
@@ -278,6 +278,7 @@ func loadCalendar() {
                 }
             }
         }
+        closure?()
     }
     session.resume()
 }
@@ -588,7 +589,13 @@ func split(string: String) -> [String] {
     return splitString
 }
 
-func relativeDateString(from date : Date, showTime: Bool = true) -> String {
+func relativeDateString(from date : Date, showTime: Bool = true, capitaliseIn: Bool = true) -> String {
+    
+    var inWord = "In"
+    
+    if capitaliseIn == false {
+        inWord = "in"
+    }
     
     if showTime {
         
@@ -607,7 +614,7 @@ func relativeDateString(from date : Date, showTime: Bool = true) -> String {
             if day < 1 {
                 return "\(-day) days ago"
             } else {
-                return "In \(day) days at \(formatter.string(from: date))"
+                return "\(inWord) \(day) days at \(formatter.string(from: date))"
             }
         }
     } else {
@@ -627,7 +634,7 @@ func relativeDateString(from date : Date, showTime: Bool = true) -> String {
             if day < 1 {
                 return "\(-day) days ago"
             } else {
-                return "In \(day) days"
+                return "\(inWord) \(day) days"
             }
         }
     }
