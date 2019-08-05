@@ -280,7 +280,7 @@ func loadCalendar(closure: (()->())? = nil) {
                 }
             }
             
-            sortedEvents.sort { $0.dtend! >= $1.dtend! }
+            sortedEvents.sort { $0.dtstart! < $1.dtstart! }
 
             for event in sortedEvents {
                 var splitInfo:[String] = []
