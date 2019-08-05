@@ -1,9 +1,15 @@
 import SwiftyGPIO
 import Foundation
+
+#if os(Linux)
 import Glibc
+#else
+import Darwin
+#endif
+
 import HD44780LCD
 
-// MARK: - Fact
+// MARK: - Fact -
 struct Fact: Codable {
     let id, text, source: String?
     let sourceURL: String?
@@ -17,9 +23,9 @@ struct Fact: Codable {
     }
 }
 
-// MARK: - End Fact
+// MARK: - End Fact -
 
-// MARK: - News
+// MARK: - News -
 struct News: Codable {
     let status: String
     let totalResults: Int
@@ -50,9 +56,9 @@ struct Source: Codable {
     let name: String
 }
 
-// MARK: - End News
+// MARK: - End News -
 
-// MARK: - TrainInfo
+// MARK: - TrainInfo -
 struct TrainInfo: Codable {
     let departures: [Departure]?
     let generatedAt, locationName, crs: String?
@@ -135,8 +141,9 @@ class JSONNull: Codable, Hashable {
     }
 }
 
-// MARK: - End TrainInfo
+// MARK: - End TrainInfo -
 
+// MARK: - Variables
 let width = 20
 let height = 4
 
@@ -170,11 +177,13 @@ let trainFetchInterval: TimeInterval = 60 * 2
 let factFetchInterval: TimeInterval = 60 * 30
 let calendarFetchInterval: TimeInterval = 60 * 60
 
+// MARK: - URLs
 let newsURL = URL(string: "https://newsapi.org/v2/top-headlines?sources=bbc-news&apiKey=2c5ede941f6546c0a3ce330b9c03af8b")!
 let trainURL = URL(string: "https://huxley.apphb.com/next/rys/none/ctk?accessToken=3a02290d-e8cc-4eb9-abb2-709ea77e3e69")!
 let factURL = URL(string: "https://uselessfacts.jsph.pl/random.json?language=en")!
 let calendarURL = URL(string: "http://p57-calendars.icloud.com/published/2/MTMzOTU1MTA3NzEzMzk1NceTE2UwoBF7JX5n7L9RtkzXEF2XkEuP0ZshMqnZSlpxYhAYO8WWRvrmaTab9fyXH8HltnUOIx4RUC-kb8RxmJY")!
 
+// MARK: - News
 func loadNews(closure: (()->())? = nil){
     
     let session = URLSession.shared.dataTask(with: newsURL) { (data: Data?, response: URLResponse?, error: Error?) in
@@ -216,6 +225,7 @@ func loadNews(closure: (()->())? = nil){
     session.resume()
 }
 
+// MARK: - Calendar
 func loadCalendar(closure: (()->())? = nil) {
 
     let session = URLSession.shared.dataTask(with: calendarURL) { (data: Data?, response: URLResponse?, error: Error?) in
@@ -246,36 +256,51 @@ func loadCalendar(closure: (()->())? = nil) {
             currentCalendarScreen = 0
             fetchCalendarDate = Date()
             
+            var sortedEvents: [Event] = []
+            var filteredEvents: [Event] = []
+            
+            let today = Date()
+            
             for event in cal.subComponents where event is Event {
                 if let event = event as? Event {
-                    if let endDate = event.dtend {
+                    filteredEvents.append(event)
+                }
+            }
+            
+            for event in filteredEvents {
+                if let endDate = event.dtend {
+                    
+                    let today = Date()
+                    let nextDate = NSCalendar.current.date(byAdding: .day, value: 14, to: today)!
+                    
+                    if endDate > today && endDate < nextDate {
                         
-                        let today = Date()
-                        let nextDate = NSCalendar.current.date(byAdding: .day, value: 14, to: today)!
-                        
-                        if endDate > today && endDate < nextDate {
-                            
-                            var splitInfo:[String] = []
-                            
-                            if let summary = event.summary {
-                                splitInfo = split(string: summary)
-                            }
-                            
-                            if let start = event.dtstart, let end = event.dtend {
-                                
-                                if start < today {
-                                    let endDateString = relativeDateString(from: end, showTime: false, capitaliseIn: false)
-                                    splitInfo.append("Ends \(endDateString)")
-                                } else {
-                                    let startDateString = relativeDateString(from: start, showTime: true)
-                                    splitInfo.append(startDateString)
-                                }
-                            }
-                            
-                            displayCalendarScreens.append(splitInfo)
-                        }
+                        sortedEvents.append(event)
                     }
                 }
+            }
+            
+            sortedEvents.sort { $0.dtend! >= $1.dtend! }
+
+            for event in sortedEvents {
+                var splitInfo:[String] = []
+                
+                if let summary = event.summary {
+                    splitInfo = split(string: summary)
+                }
+                
+                if let start = event.dtstart, let end = event.dtend {
+                    
+                    if start < today {
+                        let endDateString = relativeDateString(from: end, showTime: false, capitaliseIn: false)
+                        splitInfo.append("Ends \(endDateString)")
+                    } else {
+                        let startDateString = relativeDateString(from: start, showTime: true)
+                        splitInfo.append(startDateString)
+                    }
+                }
+                
+                displayCalendarScreens.append(splitInfo)
             }
         }
         closure?()
@@ -283,6 +308,7 @@ func loadCalendar(closure: (()->())? = nil) {
     session.resume()
 }
 
+// MARK: - Train
 func loadTrain(closure: (()->())? = nil){
     
     let session = URLSession.shared.dataTask(with: trainURL) { (data: Data?, response: URLResponse?, error: Error?) in
@@ -336,6 +362,7 @@ func loadTrain(closure: (()->())? = nil){
     session.resume()
 }
 
+// MARK: - Fact
 func loadFact(closure: (()->())? = nil){
     
     let session = URLSession.shared.dataTask(with: factURL) { (data: Data?, response: URLResponse?, error: Error?) in
@@ -377,6 +404,7 @@ func loadFact(closure: (()->())? = nil){
     session.resume()
 }
 
+// MARK: - Display
 func displayInfo() {
     
     repeat {
@@ -538,6 +566,7 @@ func displayInfo() {
     } while (true)
 }
 
+// MARK: - Helper functions
 func isCorrectDayToLoadTrainFeed() -> Bool {
     return isThis(days: ["Monday", "Friday"], between: 6, and: 10, forDate: Date())
 }
@@ -640,6 +669,7 @@ func relativeDateString(from date : Date, showTime: Bool = true, capitaliseIn: B
     }
 }
 
+// MARK: - Lifecycle
 func loadFeeds() {
     print("\nLoading Feeds")
     loadNews() {
