@@ -568,7 +568,7 @@ func displayInfo() {
 
 // MARK: - Helper functions
 func isCorrectDayToLoadTrainFeed() -> Bool {
-    return isThis(days: ["Monday", "Friday"], between: 6, and: 10, forDate: Date())
+    return isThis(days: ["Monday", "Friday"], between: 6, and: 10, forDate: Date()) || isThis(days: ["Wednesday", "Thursday"], between: 6, and: 22, forDate: Date())
 }
 
 func isThis(days: [String], between minTime: Int, and maxTime: Int, forDate date: Date) -> Bool {
